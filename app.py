@@ -56,12 +56,8 @@ def bad_request(err):
 
 @app.get("/")
 def index():
-    return render_template(
-        "index.html",
-        video_containers=VIDEO_CONTAINERS,
-        audio_formats=AUDIO_FORMATS,
-        audio_bitrates=AUDIO_BITRATES,
-    )
+    # index.html është HTML statik, që të përdoret njësoj edhe në app-in Android.
+    return render_template("index.html")
 
 
 @app.get("/api/info")

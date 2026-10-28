@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>YouTube Downloader</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="static/style.css">
 </head>
 <body>
   <main class="container">
@@ -40,25 +40,28 @@
 
         <h3>Formati i skedarit</h3>
         <div class="chips">
-          {% for c in video_containers %}
-          <label class="chip"><input type="radio" name="vcontainer" value="{{ c }}" {% if loop.first %}checked{% endif %}><span>{{ c | upper }}</span></label>
-          {% endfor %}
+          <label class="chip"><input type="radio" name="vcontainer" value="mp4" checked><span>MP4</span></label>
+          <label class="chip"><input type="radio" name="vcontainer" value="mkv"><span>MKV</span></label>
+          <label class="chip"><input type="radio" name="vcontainer" value="webm"><span>WEBM</span></label>
         </div>
       </div>
 
       <div id="audio-options" hidden>
         <h3>Formati i skedarit</h3>
         <div class="chips">
-          {% for a in audio_formats %}
-          <label class="chip"><input type="radio" name="acontainer" value="{{ a }}" {% if loop.first %}checked{% endif %}><span>{{ a | upper }}</span></label>
-          {% endfor %}
+          <label class="chip"><input type="radio" name="acontainer" value="mp3" checked><span>MP3</span></label>
+          <label class="chip"><input type="radio" name="acontainer" value="m4a"><span>M4A</span></label>
+          <label class="chip"><input type="radio" name="acontainer" value="opus"><span>OPUS</span></label>
+          <label class="chip"><input type="radio" name="acontainer" value="wav"><span>WAV</span></label>
+          <label class="chip"><input type="radio" name="acontainer" value="flac"><span>FLAC</span></label>
         </div>
         <div id="bitrate-row">
           <h3>Kualiteti MP3</h3>
           <div class="chips">
-            {% for b in audio_bitrates %}
-            <label class="chip"><input type="radio" name="bitrate" value="{{ b }}" {% if b == '192' %}checked{% endif %}><span>{{ b }} kbps</span></label>
-            {% endfor %}
+            <label class="chip"><input type="radio" name="bitrate" value="128"><span>128 kbps</span></label>
+            <label class="chip"><input type="radio" name="bitrate" value="192" checked><span>192 kbps</span></label>
+            <label class="chip"><input type="radio" name="bitrate" value="256"><span>256 kbps</span></label>
+            <label class="chip"><input type="radio" name="bitrate" value="320"><span>320 kbps</span></label>
           </div>
         </div>
       </div>
@@ -74,6 +77,6 @@
 
     <footer class="muted">Shkarkoni vetëm video për të cilat keni të drejtë (p.sh. tuajat ose me licencë të lirë).</footer>
   </main>
-  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  <script src="static/app.js"></script>
 </body>
 </html>

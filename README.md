@@ -34,3 +34,36 @@ Porti mund të ndryshohet me `PORT=8080 python app.py`.
 - YouTube i ndryshon shpesh mbrojtjet; nëse shkarkimi dështon, përditëso yt-dlp: `pip install -U "yt-dlp[default]"`.
 - Për MP4 në 4K/8K, YouTube zakonisht ofron vetëm kodekët AV1/VP9; disa player-a të vjetër mund të mos i luajnë. Në atë rast zgjidh MKV ose përdor VLC.
 - Shkarkoni vetëm përmbajtje për të cilën keni të drejtë (videot tuaja, Creative Commons, etj.). Kushtet e YouTube e ndalojnë shkarkimin pa leje.
+
+## App-i Android (APK)
+
+Folderi `android/` përmban një app Android me **të njëjtin template** (`templates/index.html` + `static/`). Shkarkimi bëhet **direkt në telefon**, pa server: app-i i ka brenda yt-dlp, Python, ffmpeg dhe QuickJS (librari [youtubedl-android](https://github.com/yausername/youtubedl-android)).
+
+- Skedarët ruhen te **Downloads/YouTube Downloader**.
+- Mund ta përdorësh edhe nga app-i i YouTube: **Shpërndaj → YT Downloader**.
+- yt-dlp përditësohet automatikisht sa herë hapet app-i.
+
+### Ku e gjen APK-në
+
+GitHub Actions (`.github/workflows/android.yml`) e ndërton APK-në në çdo push dhe e publikon te **Releases** të repo-s. Për shumicën e telefonave zgjidh skedarin `...-arm64-v8a.apk`.
+
+Në telefon: hape APK-në dhe lejo "Instalo nga burime të panjohura" kur ta kërkojë.
+
+### Nënshkrimi (opsional)
+
+Pa konfigurim, APK-ja nënshkruhet me një çelës debug që ndryshon në çdo build. Kështu, para se të instalosh versionin e ri, duhet ta çinstalosh të vjetrin. Që përditësimet të instalohen direkt sipër, krijo një çelës:
+
+```bash
+keytool -genkeypair -keystore release.keystore -alias ytdownloader -keyalg RSA -keysize 2048 -validity 10000
+base64 -w0 release.keystore
+```
+
+dhe shtoji këto te **Settings → Secrets and variables → Actions** në GitHub:
+`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (`ytdownloader`), `ANDROID_KEY_PASSWORD`.
+
+### Ndërtimi lokal
+
+```bash
+cd android
+./gradlew assembleRelease   # kërkon Android SDK (ANDROID_HOME)
+```

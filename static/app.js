@@ -3,6 +3,67 @@ let currentUrl = "";
 let mode = "video";
 let pollTimer = null;
 
+// I njëjti UI punon në dy vende: në web (me serverin Flask) dhe në app-in
+// Android, ku shkarkimi bëhet në telefon përmes `window.AndroidBridge`.
+const api = window.AndroidBridge ? androidApi(window.AndroidBridge) : webApi();
+
+function webApi() {
+  async function json(res) {
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Gabim i panjohur.");
+    return data;
+  }
+  return {
+    info: (url) => fetch(`/api/info?url=${encodeURIComponent(url)}`).then(json),
+    download: (payload) =>
+      fetch("/api/download", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then(json),
+    async progress(jobId) {
+      const res = await fetch(`/api/progress/${jobId}`);
+      return res.ok ? res.json() : null;
+    },
+    finished(jobId, job, link) {
+      $("progress-text").textContent = `Gati: ${job.filename}`;
+      link.href = `/api/file/${jobId}`;
+      link.click();
+    },
+  };
+}
+
+function androidApi(bridge) {
+  const pending = {};
+  let nextId = 0;
+  window.__androidCallback = (callId, result) => {
+    const { resolve, reject } = pending[callId];
+    delete pending[callId];
+    result.error ? reject(new Error(result.error)) : resolve(result);
+  };
+  const parse = (text) => {
+    const data = JSON.parse(text);
+    if (data.error) throw new Error(data.error);
+    return data;
+  };
+  return {
+    info: (url) =>
+      new Promise((resolve, reject) => {
+        const callId = String(nextId++);
+        pending[callId] = { resolve, reject };
+        bridge.getInfo(callId, url);
+      }),
+    download: async (payload) => parse(bridge.startDownload(JSON.stringify(payload))),
+    progress: async (jobId) => JSON.parse(bridge.progress(jobId)),
+    finished(jobId, job, link) {
+      $("progress-text").textContent = `U ruajt te Downloads/YouTube Downloader: ${job.filename}`;
+      link.textContent = "Hape skedarin";
+      link.removeAttribute("href");
+      link.onclick = () => bridge.openFile(jobId);
+    },
+  };
+}
+
 function showError(msg) {
   $("error").textContent = msg;
   $("error").hidden = !msg;
@@ -18,6 +79,7 @@ function formatSize(bytes) {
 
 function formatDuration(sec) {
   if (!sec) return "";
+  sec = Math.round(sec);
   const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
   const pad = (n) => String(n).padStart(2, "0");
   return h ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
@@ -51,9 +113,7 @@ $("url-form").addEventListener("submit", async (e) => {
   btn.textContent = "Duke kërkuar...";
   try {
     const url = $("url").value.trim();
-    const res = await fetch(`/api/info?url=${encodeURIComponent(url)}`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Gabim i panjohur.");
+    const data = await api.info(url);
     currentUrl = url;
     $("thumb").src = data.thumbnail || "";
     $("thumb").hidden = !data.thumbnail;
@@ -115,13 +175,7 @@ $("download-btn").addEventListener("click", async () => {
   $("progress").hidden = false;
   $("progress-text").textContent = "Duke filluar...";
   try {
-    const res = await fetch("/api/download", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Gabim i panjohur.");
+    const data = await api.download(payload);
     pollTimer = setInterval(() => poll(data.job_id), 1000);
   } catch (err) {
     showError(err.message);
@@ -130,9 +184,8 @@ $("download-btn").addEventListener("click", async () => {
 });
 
 async function poll(jobId) {
-  const res = await fetch(`/api/progress/${jobId}`);
-  if (!res.ok) return;
-  const job = await res.json();
+  const job = await api.progress(jobId);
+  if (!job) return;
   const pct = job.percent ?? 0;
   $("bar-fill").style.width = `${pct}%`;
 
@@ -145,12 +198,10 @@ async function poll(jobId) {
     $("progress-text").textContent = "Duke e përpunuar skedarin (ffmpeg)...";
   } else if (job.status === "finished") {
     clearInterval(pollTimer);
-    $("progress-text").textContent = `Gati: ${job.filename}`;
     const link = $("save-link");
-    link.href = `/api/file/${jobId}`;
     link.hidden = false;
     $("download-btn").disabled = false;
-    link.click();
+    api.finished(jobId, job, link);
   } else if (job.status === "error") {
     clearInterval(pollTimer);
     showError(job.error);
