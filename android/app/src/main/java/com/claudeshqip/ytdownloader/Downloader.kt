@@ -174,11 +174,13 @@ object Downloader {
             .addOption("--no-playlist")
             .addOption("--no-mtime")
             .addOption("--newline")
-            .addOption("-o", "${dir.absolutePath}/%(title).150B [%(id)s].%(ext)s")
+            // Vetëm titulli, p.sh. "Artisti - Kënga.mp3" (pa id-në e videos).
+            .addOption("-o", "${dir.absolutePath}/%(title).150B.%(ext)s")
         if (mode == "audio") {
             request.addOption("-f", "bestaudio/best")
                 .addOption("-x")
                 .addOption("--audio-format", container)
+                .addOption("--embed-metadata")
             if (container == "mp3") request.addOption("--audio-quality", "${bitrate}K")
         } else {
             val h = height.toInt()

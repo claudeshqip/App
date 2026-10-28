@@ -9,6 +9,8 @@ let pollTimer = null;
 // për Windows (desktop.py hap faqen me `?desktop`).
 const isDesktop = new URLSearchParams(location.search).has("desktop");
 const api = window.AndroidBridge ? androidApi(window.AndroidBridge) : isDesktop ? desktopApi() : webApi();
+// Në Windows menuja del majtas (si te Cilësimet e Windows 11), jo poshtë si në telefon.
+if (isDesktop) document.body.classList.add("desktop");
 
 // ---- Ruajtja lokale (cilësimet; historiku në web) ----
 

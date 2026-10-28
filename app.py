@@ -178,14 +178,16 @@ def info():
 
 def build_download_opts(job_dir, mode, height, container, bitrate):
     opts = base_opts()
-    opts["outtmpl"] = os.path.join(job_dir, "%(title).150B [%(id)s].%(ext)s")
+    # Vetëm titulli, p.sh. "Artisti - Kënga.mp3" (pa id-në e videos).
+    opts["outtmpl"] = os.path.join(job_dir, "%(title).150B.%(ext)s")
 
     if mode == "audio":
         opts["format"] = "bestaudio/best"
         pp = {"key": "FFmpegExtractAudio", "preferredcodec": container}
         if container == "mp3":
             pp["preferredquality"] = bitrate
-        opts["postprocessors"] = [pp]
+        # Artisti dhe titulli futen edhe brenda skedarit, që t'i shfaqë player-i.
+        opts["postprocessors"] = [pp, {"key": "FFmpegMetadata", "add_metadata": True}]
         return opts
 
     h = int(height)

@@ -187,6 +187,89 @@ button.small-btn { padding: 8px 14px; font-size: 0.9rem; }
 .nav-btn.active { color: var(--accent); }
 .nav-btn.active svg { fill: var(--accent-soft); }
 
+.nav-brand { display: none; }
+
+/* Windows: menu anësore majtas, si te app-et e Windows 11 */
+body.desktop {
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+}
+body.desktop .container {
+  margin-left: 260px;
+  margin-right: auto;
+  max-width: 820px;
+  padding: 28px 32px 40px;
+}
+body.desktop .bottom-bar {
+  top: 0;
+  right: auto;
+  width: 248px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 8px;
+  border-top: 0;
+  border-right: 1px solid var(--border);
+  background: var(--bg);
+}
+body.desktop .nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 12px 20px;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+body.desktop .nav-brand svg {
+  width: 28px;
+  height: 28px;
+  padding: 5px;
+  border-radius: 7px;
+  background: var(--accent);
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+body.desktop .nav-btn {
+  position: relative;
+  flex: none;
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+body.desktop .nav-btn svg { width: 20px; height: 20px; }
+body.desktop .nav-btn:hover { background: var(--card); }
+body.desktop .nav-btn.active { background: var(--card); color: var(--text); }
+body.desktop .nav-btn.active svg { fill: none; color: var(--accent); }
+body.desktop .nav-btn.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 16px;
+  margin-top: -8px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+/* Cilësimet në fund të menusë, si në Windows */
+body.desktop .nav-btn[data-view="settings"] { margin-top: auto; }
+body.desktop .card, body.desktop .library li { border-radius: 8px; }
+body.desktop button, body.desktop .primary { border-radius: 6px; }
+
+/* Dritare e ngushtë: menuja mbetet vetëm me ikona */
+@media (max-width: 760px) {
+  body.desktop .container { margin-left: 64px; padding: 24px 16px 32px; }
+  body.desktop .bottom-bar { width: 56px; padding: 12px 6px; }
+  body.desktop .nav-brand { padding: 4px 8px 16px; }
+  body.desktop .nav-brand span, body.desktop .nav-btn span { display: none; }
+  body.desktop .nav-btn { justify-content: center; padding: 10px 0; }
+}
+
 @media (max-width: 520px) {
   .video-head { flex-direction: column; }
   .video-head img { width: 100%; max-width: 100%; }
