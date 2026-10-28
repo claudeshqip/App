@@ -4,9 +4,11 @@ let currentVideo = null;
 let mode = "video";
 let pollTimer = null;
 
-// I njëjti UI punon në dy vende: në web (me serverin Flask) dhe në app-in
-// Android, ku shkarkimi bëhet në telefon përmes `window.AndroidBridge`.
-const api = window.AndroidBridge ? androidApi(window.AndroidBridge) : webApi();
+// I njëjti UI punon në tre vende: në web (me serverin Flask), në app-in
+// Android (shkarkimi në telefon përmes `window.AndroidBridge`) dhe në app-in
+// për Windows (desktop.py hap faqen me `?desktop`).
+const isDesktop = new URLSearchParams(location.search).has("desktop");
+const api = window.AndroidBridge ? androidApi(window.AndroidBridge) : isDesktop ? desktopApi() : webApi();
 
 // ---- Ruajtja lokale (cilësimet; historiku në web) ----
 
@@ -76,6 +78,31 @@ function webApi() {
         about: "Versioni web.",
       };
     },
+  };
+}
+
+function desktopApi() {
+  const web = webApi();
+  const send = (method, path) =>
+    fetch(path, { method }).then(async (res) => {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gabim i panjohur.");
+      return data;
+    });
+  return {
+    ...web,
+    finished(jobId, job, link) {
+      $("progress-text").textContent = `U ruajt te ${job.location}: ${job.filename}`;
+      link.textContent = "Hape skedarin";
+      link.removeAttribute("href");
+      link.onclick = () => send("POST", `/api/library/${jobId}/open`).catch((err) => alert(err.message));
+    },
+    library: () => send("GET", "/api/library"),
+    open: (entry) => send("POST", `/api/library/${entry.id}/open`).catch((err) => alert(err.message)),
+    remove: (entry) => send("DELETE", `/api/library/${entry.id}`),
+    platform: () => send("GET", "/api/platform"),
+    chooseFolder: () => send("POST", "/api/folder/choose"),
+    resetFolder: () => send("POST", "/api/folder/reset"),
   };
 }
 
@@ -337,7 +364,7 @@ async function renderLibrary() {
       <div class="info">
         <p class="name">${escapeHtml(entry.title || entry.filename)}</p>
         <p class="meta">${escapeHtml(meta)}</p>
-        ${entry.missing ? `<p class="meta missing">Skedari nuk gjendet më në telefon.</p>` : ""}
+        ${entry.missing ? `<p class="meta missing">Skedari nuk gjendet më${isDesktop ? " në kompjuter" : " në telefon"}.</p>` : ""}
         <div class="actions">
           ${entry.missing ? "" : `<button type="button" class="small-btn open">Hape</button>`}
           <button type="button" class="small-btn secondary remove">Fshi</button>
@@ -345,9 +372,12 @@ async function renderLibrary() {
       </div>`;
     li.querySelector(".open")?.addEventListener("click", () => api.open(entry));
     li.querySelector(".remove").addEventListener("click", async () => {
+      const name = entry.title || entry.filename;
       const question = window.AndroidBridge
-        ? `Ta fshij "${entry.title || entry.filename}" edhe nga telefoni?`
-        : `Ta heq "${entry.title || entry.filename}" nga lista?`;
+        ? `Ta fshij "${name}" edhe nga telefoni?`
+        : isDesktop
+          ? `Ta fshij "${name}" edhe nga kompjuteri?`
+          : `Ta heq "${name}" nga lista?`;
       if (!confirm(question)) return;
       try {
         await api.remove(entry);

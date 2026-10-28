@@ -1,6 +1,6 @@
 # Shkarko
 
-**Faqja (shkarko APK-në):** https://claudeshqip.github.io/App/
+**Faqja (shkarko për Android dhe Windows):** https://claudeshqip.github.io/App/
 
 Web app i thjeshtë (Flask + [yt-dlp](https://github.com/yt-dlp/yt-dlp)) për shkarkimin e videove nga YouTube.
 
@@ -71,3 +71,15 @@ dhe shtoji këto te **Settings → Secrets and variables → Actions** në GitHu
 cd android
 ./gradlew assembleRelease   # kërkon Android SDK (ANDROID_HOME)
 ```
+
+## App-i për Windows 11 (x64)
+
+`desktop.py` e hap të njëjtin app (Flask + template) në një dritare Windows-i me WebView2. Funksionon njësoj si në telefon:
+
+- Shkarkimi bëhet në kompjuter; skedarët ruhen te **Downloads\Shkarko** ose në dosjen që zgjedh te Cilësimet.
+- **Shkarkimet** (me Hape/Fshi) dhe **Cilësimet** ruhen te `%APPDATA%\Shkarko`.
+- ffmpeg dhe Deno janë brenda programit; yt-dlp përditësohet vetë në sfond.
+
+GitHub Actions (`.github/workflows/windows.yml`) ndërton `Shkarko.exe` me PyInstaller, e teston (`Shkarko.exe --selftest log.txt`) dhe krijon instaluesin `Shkarko-Setup-x64.exe` me Inno Setup (`windows/shkarko.iss`). Instaluesi publikohet te release-i `windows`.
+
+Për ta nisur nga kodi (në Windows): `pip install -r requirements.txt pywebview` dhe `python desktop.py` (ffmpeg dhe deno duhet të jenë në `PATH`).

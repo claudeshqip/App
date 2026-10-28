@@ -1,8 +1,16 @@
-"""YouTube Downloader - web app i thjeshtë mbi Flask + yt-dlp."""
+"""Shkarko - web app i thjeshtë mbi Flask + yt-dlp.
 
+I njëjti server përdoret edhe nga app-i për Windows (desktop.py). Në atë
+rast (SHKARKO_DESKTOP=1) skedarët ruhen direkt në një dosje të kompjuterit
+dhe ka edhe listë shkarkimesh e cilësime, njësoj si në app-in Android.
+"""
+
+import json
 import os
 import re
 import shutil
+import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -22,6 +30,15 @@ YOUTUBE_RE = re.compile(r"^https?://([a-z0-9-]+\.)?(youtube\.com|youtu\.be)/", r
 
 jobs = {}
 jobs_lock = threading.Lock()
+
+DESKTOP = os.environ.get("SHKARKO_DESKTOP") == "1"
+APP_VERSION = os.environ.get("SHKARKO_VERSION", "dev")
+DATA_DIR = os.path.join(os.environ.get("APPDATA") or os.path.expanduser("~/.config"), "Shkarko")
+DEFAULT_FOLDER = os.path.join(os.path.expanduser("~"), "Downloads", "Shkarko")
+data_lock = threading.Lock()
+
+# desktop.py e vendos këtë: hap dritaren e Windows-it për zgjedhjen e dosjes.
+choose_folder_dialog = None
 
 
 def base_opts():
@@ -47,6 +64,58 @@ def validate_url(url):
     if not url or not YOUTUBE_RE.match(url):
         abort(400, description="Ju lutem shkruani një link valid të YouTube.")
     return url
+
+
+# ---- Ruajtja e të dhënave (vetëm në desktop) ----
+
+def _load(name, fallback):
+    try:
+        with open(os.path.join(DATA_DIR, name), encoding="utf-8") as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return fallback
+
+
+def _save(name, value):
+    os.makedirs(DATA_DIR, exist_ok=True)
+    path = os.path.join(DATA_DIR, name)
+    with open(path + ".tmp", "w", encoding="utf-8") as fh:
+        json.dump(value, fh, ensure_ascii=False)
+    os.replace(path + ".tmp", path)
+
+
+def download_folder():
+    folder = _load("settings.json", {}).get("folder")
+    return folder if folder and os.path.isdir(folder) else DEFAULT_FOLDER
+
+
+def unique_path(folder, name):
+    base, ext = os.path.splitext(name)
+    path, n = os.path.join(folder, name), 1
+    while os.path.exists(path):
+        path = os.path.join(folder, f"{base} ({n}){ext}")
+        n += 1
+    return path
+
+
+def save_to_folder(filepath, entry):
+    """Zhvendos skedarin e gatshëm në dosjen e zgjedhur dhe e shton te Shkarkimet."""
+    folder = download_folder()
+    os.makedirs(folder, exist_ok=True)
+    dest = unique_path(folder, os.path.basename(filepath))
+    size = os.path.getsize(filepath)
+    shutil.move(filepath, dest)
+    with data_lock:
+        history = _load("history.json", [])
+        history.insert(0, {**entry, "filename": os.path.basename(dest), "path": dest, "size": size,
+                           "date": int(time.time() * 1000)})
+        _save("history.json", history[:500])
+    return dest, folder
+
+
+def desktop_only():
+    if not DESKTOP:
+        abort(404)
 
 
 @app.errorhandler(400)
@@ -147,7 +216,7 @@ def update_job(job_id, **fields):
             jobs[job_id].update(fields)
 
 
-def run_job(job_id, url, opts):
+def run_job(job_id, url, opts, entry):
     stream_index = {"n": 0, "last": None}
 
     def progress_hook(d):
@@ -182,7 +251,12 @@ def run_job(job_id, url, opts):
         if not files:
             raise RuntimeError("Shkarkimi përfundoi, por skedari nuk u gjet.")
         filepath = max((os.path.join(job_dir, f) for f in files), key=os.path.getsize)
-        update_job(job_id, status="finished", percent=100, file=filepath, filename=os.path.basename(filepath))
+        location = None
+        if DESKTOP:
+            filepath, location = save_to_folder(filepath, {**entry, "id": job_id})
+            shutil.rmtree(job_dir, ignore_errors=True)
+        update_job(job_id, status="finished", percent=100, file=filepath,
+                   filename=os.path.basename(filepath), location=location)
     except Exception as exc:  # noqa: BLE001 - gabimi i dërgohet përdoruesit
         update_job(job_id, status="error", error=str(exc))
 
@@ -215,7 +289,13 @@ def download():
         jobs[job_id] = {"status": "queued", "percent": 0, "dir": job_dir, "created": time.time()}
 
     opts = build_download_opts(job_dir, mode, height, container, bitrate)
-    threading.Thread(target=run_job, args=(job_id, url, opts), daemon=True).start()
+    entry = {
+        "title": str(body.get("title") or ""),
+        "thumbnail": str(body.get("thumbnail") or ""),
+        "format": container,
+        "quality": str(body.get("quality") or ""),
+    }
+    threading.Thread(target=run_job, args=(job_id, url, opts, entry), daemon=True).start()
     return jsonify(job_id=job_id)
 
 
@@ -236,6 +316,90 @@ def get_file(job_id):
     if not job or job.get("status") != "finished":
         abort(404)
     return send_file(job["file"], as_attachment=True, download_name=job["filename"])
+
+
+# ---- Endpoint-et e app-it për Windows ----
+
+def platform_info():
+    folder = download_folder()
+    return {
+        "folder": folder,
+        "customFolder": folder != DEFAULT_FOLDER,
+        "canChooseFolder": True,
+        "about": f"Shkarko {APP_VERSION} · yt-dlp {yt_dlp.version.__version__}",
+    }
+
+
+@app.get("/api/platform")
+def platform():
+    desktop_only()
+    return jsonify(platform_info())
+
+
+@app.post("/api/folder/choose")
+def folder_choose():
+    desktop_only()
+    folder = choose_folder_dialog(download_folder()) if choose_folder_dialog else None
+    if not folder:
+        return jsonify(error="cancelled"), 400
+    with data_lock:
+        _save("settings.json", {**_load("settings.json", {}), "folder": folder})
+    return jsonify(platform_info())
+
+
+@app.post("/api/folder/reset")
+def folder_reset():
+    desktop_only()
+    with data_lock:
+        settings = _load("settings.json", {})
+        settings.pop("folder", None)
+        _save("settings.json", settings)
+    return jsonify(platform_info())
+
+
+@app.get("/api/library")
+def library():
+    desktop_only()
+    entries = []
+    for entry in _load("history.json", []):
+        entries.append({**entry, "missing": not os.path.exists(entry.get("path", ""))})
+    return jsonify(entries)
+
+
+def find_entry(entry_id):
+    entry = next((e for e in _load("history.json", []) if e.get("id") == entry_id), None)
+    if not entry:
+        abort(404)
+    return entry
+
+
+@app.post("/api/library/<entry_id>/open")
+def library_open(entry_id):
+    desktop_only()
+    path = find_entry(entry_id)["path"]
+    if not os.path.exists(path):
+        return jsonify(error="Skedari nuk gjendet më në kompjuter."), 404
+    if sys.platform == "win32":
+        os.startfile(path)  # noqa: S606 - hap skedarin me programin e Windows-it
+    else:
+        subprocess.Popen(["xdg-open", path])  # noqa: S603,S607
+    return jsonify(ok=True)
+
+
+@app.delete("/api/library/<entry_id>")
+def library_delete(entry_id):
+    desktop_only()
+    with data_lock:
+        history = _load("history.json", [])
+        entry = next((e for e in history if e.get("id") == entry_id), None)
+        if entry:
+            try:
+                os.remove(entry["path"])
+            except OSError:
+                pass
+            history.remove(entry)
+            _save("history.json", history)
+    return jsonify(ok=True)
 
 
 def cleanup_loop():
