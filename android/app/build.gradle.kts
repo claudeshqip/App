@@ -38,12 +38,12 @@ android {
         }
     }
 
-    // Python + ffmpeg janë të mëdhenj, prandaj bëhet një APK për çdo arkitekturë.
+    // Vetëm arm64-v8a (telefonat e sotëm); Python + ffmpeg për çdo arkitekturë do ta rrisnin APK-në shumë.
     splits {
         abi {
             isEnable = true
             reset()
-            include("arm64-v8a", "armeabi-v7a", "x86_64")
+            include("arm64-v8a")
             isUniversalApk = false
         }
     }

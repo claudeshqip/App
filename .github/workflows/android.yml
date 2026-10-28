@@ -67,7 +67,17 @@ jobs:
           target_commitish: ${{ github.sha }}
           files: dist/*.apk
           body: |
-            Shkarko APK-në për telefonin tënd:
-            - **arm64-v8a**: pothuajse të gjithë telefonat e rinj (rekomandohet)
-            - **armeabi-v7a**: telefona të vjetër 32-bit
-            - **x86_64**: emulatorë / Chromebook
+            Shkarko `Shkarko-arm64-v8a.apk` dhe instaloje në telefon.
+
+      - name: Remove old armeabi-v7a / x86_64 APKs from releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for tag in $(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName -q '.[].tagName'); do
+            gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' \
+              | grep -E 'armeabi-v7a|x86_64' \
+              | while read -r asset; do
+                  echo "Deleting $asset from $tag"
+                  gh release delete-asset "$tag" "$asset" --repo "$GITHUB_REPOSITORY" -y
+                done || true
+          done

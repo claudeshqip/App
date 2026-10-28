@@ -49,7 +49,7 @@ Folderi `android/` përmban një app Android me **të njëjtin template** (`temp
 
 ### Ku e gjen APK-në
 
-GitHub Actions (`.github/workflows/android.yml`) e ndërton APK-në në çdo push dhe e publikon te **Releases** të repo-s. Për shumicën e telefonave zgjidh `Shkarko-arm64-v8a.apk`. Faqja në GitHub Pages (`index.html` në rrënjë) ka gjithmonë linkun e versionit të fundit.
+GitHub Actions (`.github/workflows/android.yml`) e ndërton APK-në në çdo push dhe e publikon te **Releases** të repo-s. Ndërtohet vetëm `Shkarko-arm64-v8a.apk` (telefonat Android 64-bit). Faqja në GitHub Pages (`index.html` në rrënjë) ka gjithmonë linkun e versionit të fundit.
 
 Në telefon: hape APK-në dhe lejo "Instalo nga burime të panjohura" kur ta kërkojë.
 
