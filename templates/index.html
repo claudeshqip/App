@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="sq">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>YouTube Downloader</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="container">
+    <header>
+      <h1>YouTube Downloader</h1>
+      <p class="subtitle">Ngjit linkun, zgjidh rezolucionin dhe formatin e skedarit.</p>
+    </header>
+
+    <form id="url-form" class="card">
+      <input id="url" type="url" placeholder="https://www.youtube.com/watch?v=..." required autocomplete="off">
+      <button type="submit" id="fetch-btn">Kërko</button>
+    </form>
+
+    <p id="error" class="error" hidden></p>
+
+    <section id="video" class="card" hidden>
+      <div class="video-head">
+        <img id="thumb" alt="">
+        <div>
+          <h2 id="title"></h2>
+          <p id="meta" class="muted"></p>
+        </div>
+      </div>
+
+      <div class="tabs" role="tablist">
+        <button type="button" class="tab active" data-mode="video">Video</button>
+        <button type="button" class="tab" data-mode="audio">Vetëm audio</button>
+      </div>
+
+      <div id="video-options">
+        <h3>Rezolucioni</h3>
+        <div id="resolutions" class="grid"></div>
+
+        <h3>Formati i skedarit</h3>
+        <div class="chips">
+          {% for c in video_containers %}
+          <label class="chip"><input type="radio" name="vcontainer" value="{{ c }}" {% if loop.first %}checked{% endif %}><span>{{ c | upper }}</span></label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div id="audio-options" hidden>
+        <h3>Formati i skedarit</h3>
+        <div class="chips">
+          {% for a in audio_formats %}
+          <label class="chip"><input type="radio" name="acontainer" value="{{ a }}" {% if loop.first %}checked{% endif %}><span>{{ a | upper }}</span></label>
+          {% endfor %}
+        </div>
+        <div id="bitrate-row">
+          <h3>Kualiteti MP3</h3>
+          <div class="chips">
+            {% for b in audio_bitrates %}
+            <label class="chip"><input type="radio" name="bitrate" value="{{ b }}" {% if b == '192' %}checked{% endif %}><span>{{ b }} kbps</span></label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <button type="button" id="download-btn" class="primary">Shkarko</button>
+
+      <div id="progress" hidden>
+        <div class="bar"><div id="bar-fill"></div></div>
+        <p id="progress-text" class="muted"></p>
+        <a id="save-link" class="primary" hidden>Ruaje skedarin</a>
+      </div>
+    </section>
+
+    <footer class="muted">Shkarkoni vetëm video për të cilat keni të drejtë (p.sh. tuajat ose me licencë të lirë).</footer>
+  </main>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
