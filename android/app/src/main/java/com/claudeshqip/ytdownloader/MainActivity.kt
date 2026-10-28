@@ -3,12 +3,13 @@ package com.claudeshqip.ytdownloader
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.net.Uri
 import android.webkit.JavascriptInterface
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -21,9 +22,14 @@ import androidx.webkit.WebViewAssetLoader
 import org.json.JSONObject
 
 class MainActivity : Activity() {
+    companion object {
+        private const val REQUEST_FOLDER = 1001
+    }
+
     private lateinit var webView: WebView
     private var pageLoaded = false
     private var sharedUrl: String? = null
+    private var folderCallId: String? = null
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,6 +45,8 @@ class MainActivity : Activity() {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             setBackgroundColor(getColor(R.color.page_bg))
+            // Pa këtë, confirm() dhe alert() nuk shfaqen në WebView.
+            webChromeClient = WebChromeClient()
             webViewClient = object : WebViewClient() {
                 override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =
                     assetLoader.shouldInterceptRequest(request.url)
@@ -92,6 +100,29 @@ class MainActivity : Activity() {
         )
     }
 
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != REQUEST_FOLDER) return
+        val tree = data?.data
+        if (resultCode != RESULT_OK || tree == null) {
+            resolveFolder(JSONObject().put("error", "cancelled"))
+            return
+        }
+        contentResolver.takePersistableUriPermission(
+            tree,
+            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+        )
+        Downloader.setCustomFolder(this, tree)
+        resolveFolder(Downloader.settingsJson(this))
+    }
+
+    private fun resolveFolder(result: JSONObject) {
+        val callId = folderCallId ?: return
+        folderCallId = null
+        webView.evaluateJavascript("window.__androidCallback(${JSONObject.quote(callId)}, $result)", null)
+    }
+
     /** Ura mes JavaScript-it (static/app.js) dhe shkarkuesit në Kotlin. */
     inner class Bridge {
         @JavascriptInterface
@@ -119,18 +150,55 @@ class MainActivity : Activity() {
         fun progress(jobId: String): String = Downloader.progress(jobId).toString()
 
         @JavascriptInterface
-        fun openFile(jobId: String) {
-            val (uri, mime) = Downloader.fileOf(jobId) ?: return
+        fun listDownloads(): String = History.list(this@MainActivity).toString()
+
+        @JavascriptInterface
+        fun openDownload(id: String) {
+            val entry = History.find(this@MainActivity, id) ?: return
+            val uri = Uri.parse(entry.optString("uri"))
             runOnUiThread {
                 val view = Intent(Intent.ACTION_VIEW)
-                    .setDataAndType(uri, mime)
+                    .setDataAndType(uri, entry.optString("mime"))
                     .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 try {
                     startActivity(view)
-                } catch (e: ActivityNotFoundException) {
-                    Toast.makeText(this@MainActivity, "Nuk u gjet asnjë app për ta hapur këtë skedar.", Toast.LENGTH_LONG).show()
+                } catch (e: Exception) {
+                    Toast.makeText(this@MainActivity, "Skedari nuk u hap dot.", Toast.LENGTH_LONG).show()
                 }
             }
+        }
+
+        @JavascriptInterface
+        fun deleteDownload(id: String): String {
+            History.remove(this@MainActivity, id)
+            return "{}"
+        }
+
+        @JavascriptInterface
+        fun getSettings(): String = Downloader.settingsJson(this@MainActivity).toString()
+
+        @JavascriptInterface
+        fun chooseFolder(callId: String) {
+            runOnUiThread {
+                folderCallId = callId
+                val pick = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).addFlags(
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                        Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION,
+                )
+                try {
+                    @Suppress("DEPRECATION")
+                    startActivityForResult(pick, REQUEST_FOLDER)
+                } catch (e: Exception) {
+                    resolveFolder(JSONObject().put("error", "Zgjedhja e dosjes nuk mbështetet në këtë telefon."))
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun resetFolder(): String {
+            Downloader.setCustomFolder(this@MainActivity, null)
+            return Downloader.settingsJson(this@MainActivity).toString()
         }
     }
 }

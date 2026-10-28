@@ -49,20 +49,21 @@ jobs:
           mkdir dist
           for f in android/app/build/outputs/apk/release/*.apk; do
             abi=$(basename "$f" | sed -E 's/app-(.*)-release\.apk/\1/')
-            cp "$f" "dist/YT-Downloader-1.0.${{ github.run_number }}-$abi.apk"
+            cp "$f" "dist/Shkarko-$abi.apk"
           done
           ls -la dist
 
       - uses: actions/upload-artifact@v4
         with:
-          name: YT-Downloader-apk
+          name: Shkarko-apk
           path: dist/*.apk
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: apk-v1.0.${{ github.run_number }}
-          name: YT Downloader 1.0.${{ github.run_number }}
+          name: Shkarko 1.0.${{ github.run_number }}
+          make_latest: true
           target_commitish: ${{ github.sha }}
           files: dist/*.apk
           body: |

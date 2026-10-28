@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="sq">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shkarko</title>
+  <meta name="description" content="Shkarko video dhe audio nga YouTube në telefon, në çdo rezolucion.">
+  <link rel="stylesheet" href="static/style.css">
+  <style>
+    .hero { text-align: center; padding-top: 24px; }
+    .hero .logo {
+      width: 72px; height: 72px; border-radius: 18px; background: var(--accent);
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .hero .logo svg { width: 40px; height: 40px; fill: none; stroke: #fff; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+    .hero h1 { font-size: 2rem; margin: 16px 0 4px; }
+    .download { display: block; text-align: center; font-size: 1.1rem; margin-top: 20px; }
+    .others { text-align: center; margin-top: 12px; }
+    .others a, .card a:not(.primary) { color: var(--accent); }
+    ol, ul { padding-left: 20px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <section class="hero">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0-4.5-4.5M12 14l4.5-4.5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+      </div>
+      <h1>Shkarko</h1>
+      <p class="subtitle">Video dhe audio nga YouTube, direkt në telefon, në çdo rezolucion.</p>
+      <a class="primary download" href="https://github.com/claudeshqip/App/releases/latest/download/Shkarko-arm64-v8a.apk">Shkarko APK-në për Android</a>
+      <p class="others muted small">
+        Telefon i vjetër 32-bit? <a href="https://github.com/claudeshqip/App/releases/latest/download/Shkarko-armeabi-v7a.apk">armeabi-v7a</a>
+        · <a href="https://github.com/claudeshqip/App/releases/latest">Të gjitha versionet</a>
+      </p>
+    </section>
+
+    <div class="card">
+      <h3 class="first">Çka bën</h3>
+      <ul>
+        <li>Të gjitha rezolucionet që i ofron YouTube, deri në 4K/8K dhe 60fps.</li>
+        <li>Video: MP4, MKV, WEBM. Audio: MP3 (deri 320 kbps), M4A, OPUS, WAV, FLAC.</li>
+        <li>Lista e shkarkimeve dhe zgjedhja e dosjes ku ruhen skedarët.</li>
+        <li>Nga app-i i YouTube: <strong>Shpërndaj → Shkarko</strong>.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3 class="first">Si ta instalosh</h3>
+      <ol>
+        <li>Shtyp butonin e kuq më lart në telefon.</li>
+        <li>Hape skedarin e shkarkuar.</li>
+        <li>Lejo <strong>"Instalo nga burime të panjohura"</strong> kur ta kërkojë telefoni.</li>
+      </ol>
+    </div>
+
+    <p class="muted small" style="text-align:center">
+      Shkarkoni vetëm video për të cilat keni të drejtë.
+      · <a href="https://github.com/claudeshqip/App" style="color:var(--accent)">Kodi në GitHub</a>
+    </p>
+  </main>
+</body>
+</html>

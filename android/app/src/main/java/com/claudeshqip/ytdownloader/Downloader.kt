@@ -7,10 +7,12 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.os.PowerManager
+import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.util.Log
 import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
+import androidx.documentfile.provider.DocumentFile
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
@@ -29,7 +31,9 @@ import java.util.concurrent.TimeUnit
  */
 object Downloader {
     private const val TAG = "Downloader"
-    private const val FOLDER = "YouTube Downloader"
+    private const val FOLDER = "Shkarko"
+    private const val PREFS = "settings"
+    private const val PREF_TREE = "tree_uri"
 
     private val VIDEO_CONTAINERS = setOf("mp4", "mkv", "webm")
     private val AUDIO_FORMATS = setOf("mp3", "m4a", "opus", "wav", "flac")
@@ -156,7 +160,14 @@ object Downloader {
         val context = appContext!!
         val jobId = UUID.randomUUID().toString().replace("-", "")
         val dir = File(context.cacheDir, "downloads/$jobId").apply { mkdirs() }
-        val job = Job()
+        val job = Job(
+            JSONObject()
+                .put("id", jobId)
+                .put("title", payload.optString("title"))
+                .put("thumbnail", payload.optString("thumbnail"))
+                .put("format", container)
+                .put("quality", payload.optString("quality")),
+        )
         jobs[jobId] = job
 
         val request = YoutubeDLRequest(url)
@@ -194,7 +205,7 @@ object Downloader {
 
     private fun run(context: Context, jobId: String, job: Job, request: YoutubeDLRequest, dir: File) {
         val power = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-        val wakeLock = power.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ytdownloader:$jobId")
+        val wakeLock = power.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "shkarko:$jobId")
         wakeLock.acquire(TimeUnit.HOURS.toMillis(3))
         try {
             awaitReady()
@@ -204,8 +215,18 @@ object Downloader {
                 ?.maxByOrNull { it.length() }
                 ?: throw IOException("Shkarkimi përfundoi, por skedari nuk u gjet.")
             job.status = "processing"
-            val (uri, mime) = saveToDownloads(context, file)
-            job.finish(file.name, uri, mime)
+            val size = file.length()
+            val saved = save(context, file)
+            job.entry
+                .put("filename", file.name)
+                .put("size", size)
+                .put("date", System.currentTimeMillis())
+                .put("uri", saved.uri.toString())
+                .put("mime", saved.mime)
+                .put("path", saved.path ?: JSONObject.NULL)
+            History.add(context, job.entry)
+            job.location = folderLabel(context)
+            job.finish(file.name)
         } catch (e: Exception) {
             Log.e(TAG, "download failed", e)
             job.status = "error"
@@ -215,6 +236,10 @@ object Downloader {
             if (wakeLock.isHeld) wakeLock.release()
         }
     }
+
+    // ---- Ruajtja e skedarit ----
+
+    private class Saved(val uri: Uri, val mime: String, val path: String? = null)
 
     private fun mimeOf(file: File): String {
         val ext = file.extension.lowercase()
@@ -228,33 +253,59 @@ object Downloader {
         }
     }
 
-    private fun saveToDownloads(context: Context, file: File): Pair<Uri, String> {
+    private fun save(context: Context, file: File): Saved {
         val mime = mimeOf(file)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val resolver = context.contentResolver
-            val values = ContentValues().apply {
-                put(MediaStore.Downloads.DISPLAY_NAME, file.name)
-                put(MediaStore.Downloads.MIME_TYPE, mime)
-                put(MediaStore.Downloads.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/$FOLDER")
-                put(MediaStore.Downloads.IS_PENDING, 1)
-            }
-            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                ?: throw IOException("Skedari nuk u ruajt dot te Downloads.")
-            try {
-                resolver.openOutputStream(uri).use { out ->
-                    out ?: throw IOException("Skedari nuk u ruajt dot te Downloads.")
-                    file.inputStream().use { it.copyTo(out) }
-                }
-            } catch (e: Exception) {
-                resolver.delete(uri, null, null)
-                throw e
-            }
-            values.clear()
-            values.put(MediaStore.Downloads.IS_PENDING, 0)
-            resolver.update(uri, values, null, null)
-            return uri to mime
-        }
+        val tree = customFolder(context)
+        if (tree != null) return saveToTree(context, tree, file, mime)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) return saveToMediaStore(context, file, mime)
+        return saveLegacy(context, file, mime)
+    }
 
+    /** Dosja që përdoruesi e ka zgjedhur te Cilësimet. */
+    private fun saveToTree(context: Context, tree: Uri, file: File, mime: String): Saved {
+        val dir = DocumentFile.fromTreeUri(context, tree)
+        if (dir == null || !dir.canWrite()) {
+            throw IOException("Nuk ka qasje në dosjen e zgjedhur. Zgjidhe sërish te Cilësimet.")
+        }
+        val doc = dir.createFile(mime, file.name) ?: throw IOException("Skedari nuk u krijua dot në dosjen e zgjedhur.")
+        try {
+            context.contentResolver.openOutputStream(doc.uri).use { out ->
+                out ?: throw IOException("Skedari nuk u ruajt dot.")
+                file.inputStream().use { it.copyTo(out) }
+            }
+        } catch (e: Exception) {
+            doc.delete()
+            throw e
+        }
+        return Saved(doc.uri, mime)
+    }
+
+    private fun saveToMediaStore(context: Context, file: File, mime: String): Saved {
+        val resolver = context.contentResolver
+        val values = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, file.name)
+            put(MediaStore.Downloads.MIME_TYPE, mime)
+            put(MediaStore.Downloads.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/$FOLDER")
+            put(MediaStore.Downloads.IS_PENDING, 1)
+        }
+        val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            ?: throw IOException("Skedari nuk u ruajt dot te Downloads.")
+        try {
+            resolver.openOutputStream(uri).use { out ->
+                out ?: throw IOException("Skedari nuk u ruajt dot te Downloads.")
+                file.inputStream().use { it.copyTo(out) }
+            }
+        } catch (e: Exception) {
+            resolver.delete(uri, null, null)
+            throw e
+        }
+        values.clear()
+        values.put(MediaStore.Downloads.IS_PENDING, 0)
+        resolver.update(uri, values, null, null)
+        return Saved(uri, mime)
+    }
+
+    private fun saveLegacy(context: Context, file: File, mime: String): Saved {
         @Suppress("DEPRECATION")
         val folder = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), FOLDER)
         folder.mkdirs()
@@ -263,19 +314,61 @@ object Downloader {
         while (target.exists()) target = File(folder, "${file.nameWithoutExtension} (${n++}).${file.extension}")
         file.copyTo(target)
         MediaScannerConnection.scanFile(context, arrayOf(target.absolutePath), arrayOf(mime), null)
-        return FileProvider.getUriForFile(context, "${context.packageName}.files", target) to mime
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", target)
+        return Saved(uri, mime, target.absolutePath)
     }
+
+    // ---- Cilësimet: dosja ----
+
+    private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+    fun customFolder(context: Context): Uri? = prefs(context).getString(PREF_TREE, null)?.let(Uri::parse)
+
+    fun setCustomFolder(context: Context, tree: Uri?) {
+        val old = customFolder(context)
+        if (old != null && old != tree) {
+            try {
+                context.contentResolver.releasePersistableUriPermission(
+                    old,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                )
+            } catch (e: SecurityException) {
+                Log.w(TAG, "release permission failed", e)
+            }
+        }
+        prefs(context).edit().putString(PREF_TREE, tree?.toString()).apply()
+    }
+
+    fun folderLabel(context: Context): String {
+        val tree = customFolder(context) ?: return "Downloads/$FOLDER"
+        // p.sh. "primary:Movies/Shkarko" → "Memoria e telefonit/Movies/Shkarko"
+        val docId = DocumentsContract.getTreeDocumentId(tree)
+        val volume = docId.substringBefore(":")
+        val path = docId.substringAfter(":", "")
+        val root = if (volume == "primary") "Memoria e telefonit" else "Karta SD"
+        return if (path.isEmpty()) root else "$root/$path"
+    }
+
+    fun settingsJson(context: Context): JSONObject {
+        val ytdlp = try {
+            YoutubeDL.getInstance().versionName(context) ?: YoutubeDL.getInstance().version(context)
+        } catch (e: Exception) {
+            null
+        }
+        val app = context.packageManager.getPackageInfo(context.packageName, 0).versionName
+        return JSONObject()
+            .put("folder", folderLabel(context))
+            .put("customFolder", customFolder(context) != null)
+            .put("canChooseFolder", true)
+            .put("about", "Shkarko $app" + (ytdlp?.let { " · yt-dlp $it" } ?: ""))
+    }
+
+    // ---- Puna aktive ----
 
     fun progress(jobId: String): JSONObject =
         jobs[jobId]?.toJson() ?: JSONObject().put("status", "error").put("error", "Shkarkimi nuk u gjet.")
 
-    fun fileOf(jobId: String): Pair<Uri, String>? {
-        val job = jobs[jobId] ?: return null
-        val uri = job.uri ?: return null
-        return uri to job.mime
-    }
-
-    private class Job {
+    private class Job(val entry: JSONObject) {
         @Volatile var status = "queued"
         @Volatile var percent = 0.0
         @Volatile var stream = 0
@@ -283,13 +376,12 @@ object Downloader {
         @Volatile var eta = 0L
         @Volatile var error: String? = null
         @Volatile var filename: String? = null
-        @Volatile var uri: Uri? = null
-        @Volatile var mime = "application/octet-stream"
+        @Volatile var location: String? = null
 
         private val percentRe = Regex("""^\[download]\s+([\d.]+)%""")
         private val speedRe = Regex("""at\s+([\d.]+)\s*([KMG]?)i?B/s""")
         private val processingPrefixes = listOf(
-            "[Merger]", "[ExtractAudio]", "[VideoRemuxer]", "[VideoConvertor]", "[FixupM", "[Fixup",
+            "[Merger]", "[ExtractAudio]", "[VideoRemuxer]", "[VideoConvertor]", "[Fixup",
         )
 
         fun onLine(line: String, eta: Long) {
@@ -317,10 +409,8 @@ object Downloader {
             }
         }
 
-        fun finish(name: String, savedUri: Uri, savedMime: String) {
+        fun finish(name: String) {
             filename = name
-            uri = savedUri
-            mime = savedMime
             percent = 100.0
             status = "finished"
         }
@@ -333,5 +423,6 @@ object Downloader {
             .put("eta", eta)
             .put("error", error ?: JSONObject.NULL)
             .put("filename", filename ?: JSONObject.NULL)
+            .put("location", location ?: JSONObject.NULL)
     }
 }

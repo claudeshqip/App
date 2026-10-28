@@ -2,81 +2,166 @@
 <html lang="sq">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>YouTube Downloader</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Shkarko</title>
   <link rel="stylesheet" href="static/style.css">
 </head>
 <body>
   <main class="container">
-    <header>
-      <h1>YouTube Downloader</h1>
-      <p class="subtitle">Ngjit linkun, zgjidh rezolucionin dhe formatin e skedarit.</p>
-    </header>
+    <!-- Shkarko -->
+    <section id="view-download" class="view">
+      <header>
+        <h1>Shkarko</h1>
+        <p class="subtitle">Ngjit linkun, zgjidh rezolucionin dhe formatin e skedarit.</p>
+      </header>
 
-    <form id="url-form" class="card">
-      <input id="url" type="url" placeholder="https://www.youtube.com/watch?v=..." required autocomplete="off">
-      <button type="submit" id="fetch-btn">Kërko</button>
-    </form>
+      <form id="url-form" class="card">
+        <input id="url" type="url" placeholder="https://www.youtube.com/watch?v=..." required autocomplete="off">
+        <button type="submit" id="fetch-btn">Kërko</button>
+      </form>
 
-    <p id="error" class="error" hidden></p>
+      <p id="error" class="error" hidden></p>
 
-    <section id="video" class="card" hidden>
-      <div class="video-head">
-        <img id="thumb" alt="">
-        <div>
-          <h2 id="title"></h2>
-          <p id="meta" class="muted"></p>
-        </div>
-      </div>
-
-      <div class="tabs" role="tablist">
-        <button type="button" class="tab active" data-mode="video">Video</button>
-        <button type="button" class="tab" data-mode="audio">Vetëm audio</button>
-      </div>
-
-      <div id="video-options">
-        <h3>Rezolucioni</h3>
-        <div id="resolutions" class="grid"></div>
-
-        <h3>Formati i skedarit</h3>
-        <div class="chips">
-          <label class="chip"><input type="radio" name="vcontainer" value="mp4" checked><span>MP4</span></label>
-          <label class="chip"><input type="radio" name="vcontainer" value="mkv"><span>MKV</span></label>
-          <label class="chip"><input type="radio" name="vcontainer" value="webm"><span>WEBM</span></label>
-        </div>
-      </div>
-
-      <div id="audio-options" hidden>
-        <h3>Formati i skedarit</h3>
-        <div class="chips">
-          <label class="chip"><input type="radio" name="acontainer" value="mp3" checked><span>MP3</span></label>
-          <label class="chip"><input type="radio" name="acontainer" value="m4a"><span>M4A</span></label>
-          <label class="chip"><input type="radio" name="acontainer" value="opus"><span>OPUS</span></label>
-          <label class="chip"><input type="radio" name="acontainer" value="wav"><span>WAV</span></label>
-          <label class="chip"><input type="radio" name="acontainer" value="flac"><span>FLAC</span></label>
-        </div>
-        <div id="bitrate-row">
-          <h3>Kualiteti MP3</h3>
-          <div class="chips">
-            <label class="chip"><input type="radio" name="bitrate" value="128"><span>128 kbps</span></label>
-            <label class="chip"><input type="radio" name="bitrate" value="192" checked><span>192 kbps</span></label>
-            <label class="chip"><input type="radio" name="bitrate" value="256"><span>256 kbps</span></label>
-            <label class="chip"><input type="radio" name="bitrate" value="320"><span>320 kbps</span></label>
+      <section id="video" class="card" hidden>
+        <div class="video-head">
+          <img id="thumb" alt="">
+          <div>
+            <h2 id="title"></h2>
+            <p id="meta" class="muted"></p>
           </div>
         </div>
-      </div>
 
-      <button type="button" id="download-btn" class="primary">Shkarko</button>
+        <div class="tabs" role="tablist">
+          <button type="button" class="tab active" data-mode="video">Video</button>
+          <button type="button" class="tab" data-mode="audio">Vetëm audio</button>
+        </div>
 
-      <div id="progress" hidden>
-        <div class="bar"><div id="bar-fill"></div></div>
-        <p id="progress-text" class="muted"></p>
-        <a id="save-link" class="primary" hidden>Ruaje skedarin</a>
-      </div>
+        <div id="video-options">
+          <h3>Rezolucioni</h3>
+          <div id="resolutions" class="grid"></div>
+
+          <h3>Formati i skedarit</h3>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="vcontainer" value="mp4" checked><span>MP4</span></label>
+            <label class="chip"><input type="radio" name="vcontainer" value="mkv"><span>MKV</span></label>
+            <label class="chip"><input type="radio" name="vcontainer" value="webm"><span>WEBM</span></label>
+          </div>
+        </div>
+
+        <div id="audio-options" hidden>
+          <h3>Formati i skedarit</h3>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="acontainer" value="mp3" checked><span>MP3</span></label>
+            <label class="chip"><input type="radio" name="acontainer" value="m4a"><span>M4A</span></label>
+            <label class="chip"><input type="radio" name="acontainer" value="opus"><span>OPUS</span></label>
+            <label class="chip"><input type="radio" name="acontainer" value="wav"><span>WAV</span></label>
+            <label class="chip"><input type="radio" name="acontainer" value="flac"><span>FLAC</span></label>
+          </div>
+          <div id="bitrate-row">
+            <h3>Kualiteti MP3</h3>
+            <div class="chips">
+              <label class="chip"><input type="radio" name="bitrate" value="128"><span>128 kbps</span></label>
+              <label class="chip"><input type="radio" name="bitrate" value="192" checked><span>192 kbps</span></label>
+              <label class="chip"><input type="radio" name="bitrate" value="256"><span>256 kbps</span></label>
+              <label class="chip"><input type="radio" name="bitrate" value="320"><span>320 kbps</span></label>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" id="download-btn" class="primary">Shkarko</button>
+
+        <div id="progress" hidden>
+          <div class="bar"><div id="bar-fill"></div></div>
+          <p id="progress-text" class="muted"></p>
+          <a id="save-link" class="primary" hidden>Ruaje skedarin</a>
+        </div>
+      </section>
     </section>
 
-    <footer class="muted">Shkarkoni vetëm video për të cilat keni të drejtë (p.sh. tuajat ose me licencë të lirë).</footer>
+    <!-- Shkarkimet -->
+    <section id="view-library" class="view" hidden>
+      <header>
+        <h1>Shkarkimet</h1>
+        <p class="subtitle">Videot dhe audiot që i ke shkarkuar.</p>
+      </header>
+      <p id="library-empty" class="card muted">Ende s'ke shkarkuar asgjë.</p>
+      <ul id="library" class="library"></ul>
+    </section>
+
+    <!-- Cilësimet -->
+    <section id="view-settings" class="view" hidden>
+      <header>
+        <h1>Cilësimet</h1>
+      </header>
+
+      <div class="card">
+        <h3 class="first">Ku ruhen skedarët</h3>
+        <p id="folder-label" class="folder"></p>
+        <p id="folder-note" class="muted small" hidden></p>
+        <div id="folder-actions" class="row" hidden>
+          <button type="button" id="choose-folder">Ndrysho dosjen</button>
+          <button type="button" id="reset-folder" class="secondary">Parazgjedhja</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 class="first">Rezolucioni i parazgjedhur</h3>
+        <div class="chips">
+          <label class="chip"><input type="radio" name="def-height" value="max" checked><span>Më i larti</span></label>
+          <label class="chip"><input type="radio" name="def-height" value="2160"><span>4K</span></label>
+          <label class="chip"><input type="radio" name="def-height" value="1440"><span>2K</span></label>
+          <label class="chip"><input type="radio" name="def-height" value="1080"><span>1080p</span></label>
+          <label class="chip"><input type="radio" name="def-height" value="720"><span>720p</span></label>
+          <label class="chip"><input type="radio" name="def-height" value="480"><span>480p</span></label>
+        </div>
+
+        <h3>Formati i parazgjedhur i videos</h3>
+        <div class="chips">
+          <label class="chip"><input type="radio" name="def-vcontainer" value="mp4" checked><span>MP4</span></label>
+          <label class="chip"><input type="radio" name="def-vcontainer" value="mkv"><span>MKV</span></label>
+          <label class="chip"><input type="radio" name="def-vcontainer" value="webm"><span>WEBM</span></label>
+        </div>
+
+        <h3>Formati i parazgjedhur i audios</h3>
+        <div class="chips">
+          <label class="chip"><input type="radio" name="def-acontainer" value="mp3" checked><span>MP3</span></label>
+          <label class="chip"><input type="radio" name="def-acontainer" value="m4a"><span>M4A</span></label>
+          <label class="chip"><input type="radio" name="def-acontainer" value="opus"><span>OPUS</span></label>
+          <label class="chip"><input type="radio" name="def-acontainer" value="wav"><span>WAV</span></label>
+          <label class="chip"><input type="radio" name="def-acontainer" value="flac"><span>FLAC</span></label>
+        </div>
+
+        <h3>Kualiteti MP3</h3>
+        <div class="chips">
+          <label class="chip"><input type="radio" name="def-bitrate" value="128"><span>128 kbps</span></label>
+          <label class="chip"><input type="radio" name="def-bitrate" value="192" checked><span>192 kbps</span></label>
+          <label class="chip"><input type="radio" name="def-bitrate" value="256"><span>256 kbps</span></label>
+          <label class="chip"><input type="radio" name="def-bitrate" value="320"><span>320 kbps</span></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 class="first">Rreth app-it</h3>
+        <p id="about" class="muted small"></p>
+        <p class="muted small">Shkarkoni vetëm video për të cilat keni të drejtë (p.sh. tuajat ose me licencë të lirë).</p>
+      </div>
+    </section>
   </main>
+
+  <nav class="bottom-bar">
+    <button type="button" class="nav-btn active" data-view="download">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0-4.5-4.5M12 14l4.5-4.5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+      <span>Shkarko</span>
+    </button>
+    <button type="button" class="nav-btn" data-view="library">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m10 9 5 3-5 3z"/></svg>
+      <span>Shkarkimet</span>
+    </button>
+    <button type="button" class="nav-btn" data-view="settings">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10m4 0h2M4 12h4m4 0h8M4 18h12m4 0h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+      <span>Cilësimet</span>
+    </button>
+  </nav>
   <script src="static/app.js"></script>
 </body>
 </html>

@@ -87,4 +87,5 @@ dependencies {
     implementation("io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1")
     implementation("androidx.core:core-ktx:1.16.0")
     implementation("androidx.webkit:webkit:1.14.0")
+    implementation("androidx.documentfile:documentfile:1.1.0")
 }

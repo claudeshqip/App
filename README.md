@@ -1,4 +1,6 @@
-# YouTube Downloader
+# Shkarko
+
+**Faqja (shkarko APK-në):** https://claudeshqip.github.io/App/
 
 Web app i thjeshtë (Flask + [yt-dlp](https://github.com/yt-dlp/yt-dlp)) për shkarkimin e videove nga YouTube.
 
@@ -39,13 +41,15 @@ Porti mund të ndryshohet me `PORT=8080 python app.py`.
 
 Folderi `android/` përmban një app Android me **të njëjtin template** (`templates/index.html` + `static/`). Shkarkimi bëhet **direkt në telefon**, pa server: app-i i ka brenda yt-dlp, Python, ffmpeg dhe QuickJS (librari [youtubedl-android](https://github.com/yausername/youtubedl-android)).
 
-- Skedarët ruhen te **Downloads/YouTube Downloader**.
-- Mund ta përdorësh edhe nga app-i i YouTube: **Shpërndaj → YT Downloader**.
+- Shiriti poshtë: **Shkarko**, **Shkarkimet** (lista e skedarëve të shkarkuar) dhe **Cilësimet**.
+- Skedarët ruhen te **Downloads/Shkarko**, ose në dosjen që zgjedh te Cilësimet.
+- Te Cilësimet vendos edhe rezolucionin dhe formatet e parazgjedhura.
+- Mund ta përdorësh edhe nga app-i i YouTube: **Shpërndaj → Shkarko**.
 - yt-dlp përditësohet automatikisht sa herë hapet app-i.
 
 ### Ku e gjen APK-në
 
-GitHub Actions (`.github/workflows/android.yml`) e ndërton APK-në në çdo push dhe e publikon te **Releases** të repo-s. Për shumicën e telefonave zgjidh skedarin `...-arm64-v8a.apk`.
+GitHub Actions (`.github/workflows/android.yml`) e ndërton APK-në në çdo push dhe e publikon te **Releases** të repo-s. Për shumicën e telefonave zgjidh `Shkarko-arm64-v8a.apk`. Faqja në GitHub Pages (`index.html` në rrënjë) ka gjithmonë linkun e versionit të fundit.
 
 Në telefon: hape APK-në dhe lejo "Instalo nga burime të panjohura" kur ta kërkojë.
 
